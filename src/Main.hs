@@ -2,6 +2,7 @@
 
 import System.Console.CmdArgs
 import Control.Arrow ((&&&))
+import qualified Data.ByteString.Char8 as C
 
 data WC = WC { chars  :: Bool
              , lines_ :: Bool
@@ -20,23 +21,29 @@ wc = WC { chars  = def &= name "m" &= help "print the byte counts"
                  "characters delimited by white space.")
         &= summary "wc v0.0.1, (C) Rodney Gomes"
 
-countChars :: String -> String
-countChars = show . length
+countChars :: C.ByteString -> C.ByteString
+countChars = C.pack . show . C.length
 
-countLines :: String -> String
-countLines = show . length . lines
+countLines :: C.ByteString -> C.ByteString
+countLines = C.pack . show . length . C.lines
 
-countWords :: String -> String
-countWords = show . length . words
+countWords :: C.ByteString -> C.ByteString
+countWords = C.pack . show . length . C.words
 
-flat :: (String, (String, String)) -> String
-flat (a, (b, c)) = " " ++ a ++ " " ++ b ++ " " ++ c
+space :: C.ByteString
+space = C.pack " "
 
-optionHandler :: WC -> String -> String
-optionHandler WC {chars  = True} = countChars
-optionHandler WC {lines_ = True} = countLines
-optionHandler WC {words_ = True} = countWords
-optionHandler _                  = flat . (countLines &&& countWords &&& countChars)
+flat :: (C.ByteString, (C.ByteString, C.ByteString)) -> C.ByteString
+flat (a, (b, c)) = C.concat [a, space, b, space, c]
+
+addNewLine :: C.ByteString -> C.ByteString
+addNewLine x = C.concat [x, C.pack "\n"]
+
+optionHandler :: WC -> C.ByteString -> C.ByteString
+optionHandler WC {chars  = True} = addNewLine . countChars
+optionHandler WC {lines_ = True} = addNewLine . countLines
+optionHandler WC {words_ = True} = addNewLine . countWords
+optionHandler _                  = addNewLine . flat . (countLines &&& countWords &&& countChars)
 
 main :: IO ()
-main = cmdArgs wc >>= interact . optionHandler
+main = cmdArgs wc >>= C.interact . optionHandler
